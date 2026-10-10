@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Match Mona</title>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 16px;
+  background: #101323;
+  color: white;
+  font-family: Arial, sans-serif;
+}
+
+.container {
+  max-width: 850px;
+  margin: auto;
+}
+
+h1 {
+  text-align: center;
+  color: #f9a8d4;
+  cursor: pointer;
+  user-select: none;
+}
+
+.subtitle {
+  text-align: center;
+  color: #b9bfd6;
+  margin-bottom: 20px;
+}
+
+.panel {
+  background: #1c2036;
+  padding: 16px;
+  border-radius: 15px;
+  margin: 14px 0;
+}
+
+input, select, button {
+  width: 100%;
+  padding: 12px;
+  margin: 6px 0;
+  border: 0;
+  border-radius: 9px;
+  font-size: 16px;
+}
+
+input, select {
+  background: #303650;
+  color: white;
+}
+
+button {
+  background: #ec4899;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+button:active {
+  transform: scale(.98);
+}
+
+.secondary {
+  background: #46516f;
+}
+
+.hidden {
+  display: none !important;
+}
+
+#secretPanel {
+  display: none;
+  background: #291b24;
+  border: 2px dashed #fb923c;
+  padding: 12px;
+  border-radius: 12px;
+  margin: 12px 0;
+}
+
+#secretMessage {
+  color: #fbbf24;
+  text-align: center;
+}
+
+#roomInfo {
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+#status {
+  color: #f9a8d4;
+  text-align: center;
+  font-weight: bold;
+}
+
+#scoreboard {
+  display: flex;
+  justify-content: space-around;
+  gap: 10px;
+  flex-wrap: wrap;
+  text-align: center;
+}
+
+.playerScore {
+  background: #303650;
+  border-radius: 10px;
+  padding: 12px;
+  flex: 1;
+  min-width: 120px;
+}
+
+#board {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 7px;
+  margin-top: 16px;
+}
+
+.card {
+  aspect-ratio: 1;
+  min-width: 0;
+  border: 2px solid #59617e;
+  border-radius: 10px;
+  background: #303650;
+  color: white;
+  font-size: clamp(18px, 5vw, 34px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+}
+
+.card.matched {
+  background: #176b58;
+  border-color: #34d399;
+}
+
+.card:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+.cheatOn {
+  background: #dc2626 !important;
+}
+
+.small {
+  font-size: 13px;
+  color: #c5cbe0;
+  text-align: center;
+}
+
+@media (min-width: 650px) {
+  #board {
+    grid-template-columns: repeat(10, minmax(0, 1fr));
+    gap: 8px;
+  }
+}
+
+@media (max-width: 380px) {
+  body {
+    padding: 8px;
+  }
+
+  .panel {
+    padding: 11px;
+  }
+
+  #board {
+    gap: 4px;
+  }
+
+  .card {
+    border-radius: 6px;
+  }
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+  <h1 id="secretTitle">🃏 Match Mona</h1>
+  <p class="subtitle">ONLINE MULTIPLAYER MEMORY GAME</p>
+
+  <!-- SECRET PANEL: OUTSIDE THE HIDDEN GAME -->
+  <div id="secretPanel">
+    <h3>🔐 Secret Access</h3>
+    <p>Enter the secret code to unlock Cheat Vision.</p>
+
+    <input
+      id="secretCode"
+      type="password"
+      placeholder="Enter secret code"
+      autocomplete="off"
+    >
+
+    <button id="activateCheat">ACTIVATE CHEAT</button>
+    <button id="closeSecret" class="secondary">CLOSE</button>
+
+    <p id="secretMessage"></p>
+  </div>
+
+  <!-- MAIN MENU -->
+  <div class="panel" id="setup">
+    <h2>Create a Room</h2>
+
+    <input id="playerName" maxlength="20"
+      placeholder="Enter your name">
+
+    <label for="pairCount">Choose number of pairs:</label>
+    <select id="pairCount">
+      <option value="15">15 Pairs — 30 Cards</option>
+      <option value="30">30 Pairs — 60 Cards</option>
+      <option value="50">50 Pairs — 100 Cards</option>
+      <option value="100">100 Pairs — 200 Cards</option>
+    </select>
+
+    <button id="createBtn">CREATE ROOM</button>
+
+    <hr style="border-color:#414762; margin:20px 0">
+
+    <h2>Join a Room</h2>
+
+    <input id="roomInput" maxlength="6"
+      placeholder="Enter 6-character room code">
+
+    <button id="joinBtn" class="secondary">JOIN ROOM</button>
+
+    <p id="menuMessage" class="small"></p>
+  </div>
+
+  <!-- GAME -->
+  <div class="panel hidden" id="game">
+
+    <div id="roomInfo">
+      <h2>Room: <span id="roomCode">------</span></h2>
+      <button id="copyRoom" class="secondary">COPY ROOM CODE</button>
+    </div>
+
+    <div id="scoreboard"></div>
+
+    <p id="status">Waiting for room...</p>
+
+    <p class="small">
+      Match two identical cards. Each successful match earns one point.
+    </p>
+
+    <button id="cheatBtn" class="hidden">😈 CHEAT VISION: OFF</button>
+
+    <div id="board"></div>
+
+    <button id="backBtn" class="secondary">BACK TO MENU</button>
+  </div>
+
+  <p class="small">
+    Match Mona · Online Memory Game
+  </p>
+</div>
+
+<script type="module">
+import { initializeApp } from
+  "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+
+import {
+  getDatabase,
+  ref,
+  get,
+  set,
+  update,
+  onValue
+} from
+  "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyANLU--8TAWQKxS96gQF8HjUGpLNOjlSb4",
+  authDomain: "match-45b2f.firebaseapp.com",
+  databaseURL: "https://match-45b2f-default-rtdb.firebaseio.com",
+  projectId: "match-45b2f",
+  storageBucket: "match-45b2f.firebasestorage.app",
+  messagingSenderId: "866542436127",
+  appId: "1:866542436127:web:2bcacdc99d0b5d5e373a2a"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+const $ = id => document.getElementById(id);
+
+let myId = "";
+let myName = "";
+let currentRoomCode = "";
+let latestRoom = null;
+let unsubscribeRoom = null;
+let cheatEnabled = false;
+let resolving = false;
+
+const emojis = [
+  "🐶","🐱","🐭","🐹","🐰","🦊","🐻","🐼","🐨","🐯",
+  "🦁","🐮","🐷","🐸","🐵","🐔","🐧","🐦","🐤","🦆",
+  "🦅","🦉","🦇","🐺","🐗","🐴","🦄","🐝","🪲","🐞",
+  "🦋","🐌","🐢","🐍","🦎","🐙","🦑","🦀","🐠","🐬",
+  "🐳","🦈","🐊","🐘","🦒","🦓","🦍","🐪","🐄","🐎",
+  "🌸","🌻","🌹","🌷","🌵","🌲","🍀","🍁","🍎","🍊",
+  "🍋","🍉","🍇","🍓","🍒","🍍","🥝","🥑","🥕","🌽",
+  "🍕","🍔","🍟","🌮","🍿","🍩","🍪","🎂","🍭","🍫",
+  "⚽","🏀","🏈","🎾","🎱","🏆","🎮","🎸","🎹","🎨",
+  "🚗","🚕","🚲","✈️","🚀","🚁","🚂","⛵","⌚","💎"
+];
+
+function shuffle(array) {
+  const result = [...array];
+
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+
+  return result;
+}
+
+function makeCards(pairCount) {
+  const chosen = shuffle(emojis).slice(0, pairCount);
+  const cards = [];
+
+  chosen.forEach((emoji, index) => {
+    cards.push({
+      id: index + "a",
+      emoji,
+      matched: false
+    });
+
+    cards.push({
+      id: index + "b",
+      emoji,
+      matched: false
+    });
+  });
+
+  return shuffle(cards);
+}
+
+function makeRoomCode() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "";
+
+  for (let i = 0; i < 6; i++) {
+    code += chars[Math.floor(Math.random() * chars.length)];
+  }
+
+  return code;
+}
+
+function showMessage(message) {
+  $("menuMessage").textContent = message;
+}
+
+function listenToRoom(code) {
+  if (unsubscribeRoom) unsubscribeRoom();
+
+  currentRoomCode = code;
+
+  unsubscribeRoom = onValue(
+    ref(db, "rooms/" + code),
+    snapshot => {
+      if (!snapshot.exists()) {
+        $("status").textContent = "Room no longer exists.";
+        return;
+      }
+
+      latestRoom = snapshot.val();
+      renderRoom(latestRoom);
+    },
+    error => {
+      $("status").textContent = "Connection error: " + error.message;
+    }
+  );
+}
+
+function enterRoom(code) {
+  $("setup").classList.add("hidden");
+  $("game").classList.remove("hidden");
+
+  $("roomCode").textContent = code;
+  $("status").textContent = "Connecting...";
+
+  listenToRoom(code);
+}
+
+function renderRoom(room) {
+  if (!room) return;
+
+  $("roomCode").textContent = currentRoomCode;
+
+  const players = Object.entries(room.players || {});
+  const scores = room.scores || {};
+
+  $("scoreboard").innerHTML = "";
+
+  players.forEach(([id, player]) => {
+    const box = document.createElement("div");
+    box.className = "playerScore";
+
+    const name = document.createElement("strong");
+    name.textContent = player.name || "Player";
+
+    const score = document.createElement("div");
+    score.textContent = "Score: " + (scores[id] || 0);
+
+    if (id === room.turn) {
+      box.style.border = "2px solid #f9a8d4";
+    }
+
+    box.append(name, score);
+    $("scoreboard").appendChild(box);
+  });
+
+  const matchedCount = (room.cards || [])
+    .filter(card => card.matched).length;
+
+  if (matchedCount === room.cards.length) {
+    const highest = Math.max(
+      0,
+      ...Object.values(scores)
+    );
+
+    const winners = players
+      .filter(([id]) => (scores[id] || 0) === highest)
+      .map(([, player]) => player.name);
+
+    $("status").textContent =
+      "🏆 Game finished! Winner: " + winners.join(", ");
+
+  } else if (players.length < 2) {
+    $("status").textContent =
+      "Waiting for another player to join...";
+
+  } else {
+    const activePlayer = room.players[room.turn];
+
+    $("status").textContent =
+      activePlayer
+        ? "🎮 Turn: " + activePlayer.name
+        : "Game in progress...";
+  }
+
+  const board = $("board");
+  board.innerHTML = "";
+
+  (room.cards || []).forEach((card, index) => {
+    const button = document.createElement("button");
+    button.className = "card";
+
+    if (card.matched) {
+      button.classList.add("matched");
+    }
+
+    const revealed =
+      cheatEnabled ||
+      card.matched ||
+      (room.selected || []).includes(index);
+
+    button.textContent = revealed ? card.emoji : "?";
+
+    button.disabled =
+      card.matched ||
+      (room.selected || []).includes(index) ||
+      players.length < 2 ||
+      room.turn !== myId ||
+      room.status === "finished" ||
+      (room.selected || []).length >= 2;
+
+    button.addEventListener("click", () => flipCard(index));
+
+    board.appendChild(button);
+  });
+}
+
+async function createRoom() {
+  try {
+    myName = $("playerName").value.trim() || "Player 1";
+    myId = "p_" + Math.random().toString(36).slice(2, 12);
+
+    const pairCount = Number($("pairCount").value);
+
+    $("createBtn").disabled = true;
+    showMessage("Creating room...");
+
+    let code;
+    let snapshot;
+    let attempts = 0;
+
+    do {
+      code = makeRoomCode();
+      snapshot = await get(ref(db, "rooms/" + code));
+      attempts++;
+    } while (snapshot.exists() && attempts < 10);
+
+    if (snapshot.exists()) {
+      throw new Error("Could not create a unique room. Try again.");
+    }
+
+    const room = {
+      status: "playing",
+      pairCount,
+      createdAt: Date.now(),
+      players: {
+        [myId]: {
+          name: myName,
+          joinedAt: Date.now()
+        }
+      },
+      cards: makeCards(pairCount),
+      selected: [],
+      turn: myId,
+      scores: {
+        [myId]: 0
+      }
+    };
+
+    await set(ref(db, "rooms/" + code), room);
+
+    enterRoom(code);
+    showMessage("");
+
+  } catch (error) {
+    showMessage("Error: " + error.message);
+  } finally {
+    $("createBtn").disabled = false;
+  }
+}
+
+async function joinRoom() {
+  try {
+    const code = $("roomInput").value.trim().toUpperCase();
+
+    if (code.length !== 6) {
+      showMessage("Enter a valid 6-character room code.");
+      return;
+    }
+
+    myName = $("playerName").value.trim() || "Player 2";
+    myId = "p_" + Math.random().toString(36).slice(2, 12);
+
+    $("joinBtn").disabled = true;
+    showMessage("Joining room...");
+
+    const roomRef = ref(db, "rooms/" + code);
+    const snapshot = await get(roomRef);
+
+    if (!snapshot.exists()) {
+      showMessage("Room not found. Check the room code.");
+      return;
+    }
+
+    const room = snapshot.val();
+    const players = Object.keys(room.players || {});
+
+    if (players.length >= 2) {
+      showMessage("This room already has two players.");
+      return;
+    }
+
+    if (room.status === "finished") {
+      showMessage("This game has already finished.");
+      return;
+    }
+
+    await update(roomRef, {
+      ["players/" + myId]: {
+        name: myName,
+        joinedAt: Date.now()
+      },
+      ["scores/" + myId]: 0
+    });
+
+    enterRoom(code);
+    showMessage("");
+
+  } catch (error) {
+    showMessage("Error: " + error.message);
+  } finally {
+    $("joinBtn").disabled = false;
+  }
+}
+
+async function flipCard(index) {
+  if (!latestRoom || resolving) return;
+
+  const room = latestRoom;
+  const players = Object.keys(room.players || {});
+  const selected = room.selected || [];
+
+  if (players.length < 2) return;
+  if (room.turn !== myId) return;
+  if (selected.length >= 2) return;
+  if (room.cards[index].matched) return;
+  if (selected.includes(index)) return;
+
+  const nextSelected = [...selected, index];
+
+  try {
+    await update(ref(db, "rooms/" + currentRoomCode), {
+      selected: nextSelected
+    });
+
+    if (nextSelected.length === 2) {
+      resolving = true;
+
+      setTimeout(async () => {
+        try {
+          const snapshot = await get(
+            ref(db, "rooms/" + currentRoomCode)
+          );
+
+          if (!snapshot.exists()) return;
+
+          const current = snapshot.val();
+          const picks = current.selected || [];
+
+          if (picks.length !== 2) return;
+
+          const first = current.cards[picks[0]];
+          const second = current.cards[picks[1]];
+
+          const playersNow = Object.keys(current.players || {});
+          const currentIndex = playersNow.indexOf(current.turn);
+
+          const nextPlayer =
+            playersNow[(currentIndex + 1) % playersNow.length];
+
+          const changes = {
+            selected: [],
+            turn: nextPlayer
+          };
+
+          if (first.emoji === second.emoji) {
+            changes["cards/" + picks[0] + "/matched"] = true;
+            changes["cards/" + picks[1] + "/matched"] = true;
+            changes["scores/" + current.turn] =
+              (current.scores?.[current.turn] || 0) + 1;
+
+            changes.turn = current.turn;
+
+            const totalMatched = current.cards.filter(
+              (card, i) =>
+                card.matched ||
+                picks.includes(i)
+            ).length;
+
+            if (totalMatched === current.cards.length) {
+              changes.status = "finished";
+            }
+          }
+
+          await update(
+            ref(db, "rooms/" + currentRoomCode),
+            changes
+          );
+
+        } catch (error) {
+          $("status").textContent = "Error: " + error.message;
+        } finally {
+          resolving = false;
+        }
+      }, 1000);
+    }
+  } catch (error) {
+    $("status").textContent = "Error: " + error.message;
+  }
+}
+
+// SECRET CHEAT VISION
+$("secretTitle").addEventListener("click", () => {
+  $("secretPanel").style.display = "block";
+  $("secretMessage").textContent = "Secret panel unlocked!";
+});
+
+$("closeSecret").addEventListener("click", () => {
+  $("secretPanel").style.display = "none";
+});
+
+$("activateCheat").addEventListener("click", () => {
+  const code = $("secretCode").value.trim().toUpperCase();
+
+  if (code === "MELEYA") {
+    cheatEnabled = true;
+
+    $("cheatBtn").textContent = "😈 CHEAT VISION: ON";
+    $("cheatBtn").classList.remove("hidden");
+    $("cheatBtn").classList.add("cheatOn");
+
+    $("secretMessage").textContent = "Cheat Vision activated!";
+    $("secretCode").value = "";
+
+    if (latestRoom) renderRoom(latestRoom);
+
+    setTimeout(() => {
+      $("secretPanel").style.display = "none";
+    }, 800);
+
+  } else {
+    $("secretMessage").textContent = "Wrong code! Try again.";
+  }
+});
+
+$("cheatBtn").addEventListener("click", () => {
+  cheatEnabled = !cheatEnabled;
+
+  $("cheatBtn").textContent = cheatEnabled
+    ? "😈 CHEAT VISION: ON"
+    : "😈 CHEAT VISION: OFF";
+
+  $("cheatBtn").classList.toggle("cheatOn", cheatEnabled);
+
+  if (latestRoom) renderRoom(latestRoom);
+});
+
+$("createBtn").addEventListener("click", createRoom);
+$("joinBtn").addEventListener("click", joinRoom);
+
+$("copyRoom").addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText(currentRoomCode);
+    $("copyRoom").textContent = "COPIED!";
+    setTimeout(() => {
+      $("copyRoom").textContent = "COPY ROOM CODE";
+    }, 1500);
+  } catch {
+    $("status").textContent =
+      "Your room code is: " + currentRoomCode;
+  }
+});
+
+$("backBtn").addEventListener("click", () => {
+  if (unsubscribeRoom) {
+    unsubscribeRoom();
+    unsubscribeRoom = null;
+  }
+
+  latestRoom = null;
+  currentRoomCode = "";
+  myId = "";
+  resolving = false;
+  cheatEnabled = false;
+
+  $("cheatBtn").classList.add("hidden");
+  $("cheatBtn").classList.remove("cheatOn");
+  $("cheatBtn").textContent = "😈 CHEAT VISION: OFF";
+
+  $("game").classList.add("hidden");
+  $("setup").classList.remove("hidden");
+  $("secretPanel").style.display = "none";
+  $("menuMessage").textContent = "";
+});
+
+</script>
+</body>
+</html>
